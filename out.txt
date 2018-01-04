@@ -1,0 +1,7 @@
+total 60
+-rwxrwxr-x 1 claudiu claudiu 22192 ian  3 19:47 cshell
+-rw-rw-r-- 1 claudiu claudiu  7528 ian  3 19:47 main.c
+-rw-rw-r-- 1 claudiu claudiu   380 ian  3 18:52 mainfunc.h
+-rw-rw-r-- 1 claudiu claudiu 17016 ian  3 19:47 main.o
+-rw-rw-r-- 1 claudiu claudiu   378 ian  2 22:40 Makefile
+-rw-rw-r-- 1 claudiu claudiu     0 ian  3 19:48 out.txt
