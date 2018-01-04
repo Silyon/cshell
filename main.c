@@ -1,11 +1,6 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <readline/readline.h>
-#include <readline/history.h>
-#include <fcntl.h>
-#include <sys/wait.h>
+#include "includes.h"
 #include "mainfunc.h"
+#include "uniq.h"
 
 int main(int argc, char** argv){
 
@@ -47,6 +42,7 @@ int main(int argc, char** argv){
 void analyzeCommand(char* cmd){
     int p = 0;
     int r = 0;
+	char uniq[] = "uniq";
 	
 
     if(strcmp(cmd, "ver") == 0){
@@ -61,6 +57,8 @@ void analyzeCommand(char* cmd){
 
         	cdCommand(cmd);
 
+		}else if(strncmp(cmd, uniq, 4) == 0){
+			parseUniq(cmd);
 		}else{
 			if(p > 0 && r == 0){
 
