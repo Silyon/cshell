@@ -1,6 +1,7 @@
 #include "includes.h"
 #include "mainfunc.h"
 #include "uniq.h"
+#include "tail.h"
 
 int main(int argc, char** argv){
 
@@ -43,6 +44,7 @@ void analyzeCommand(char* cmd){
     int p = 0;
     int r = 0;
 	char uniq[] = "uniq";
+	char tail[] = "tail";
 	
 
     if(strcmp(cmd, "ver") == 0){
@@ -50,6 +52,7 @@ void analyzeCommand(char* cmd){
         printf("\nCShell version: 0.1");
 
     }else{
+		//Finds if there are any | or > in the command
         findSymbols(&p, &r, cmd);
 		
 
@@ -58,7 +61,13 @@ void analyzeCommand(char* cmd){
         	cdCommand(cmd);
 
 		}else if(strncmp(cmd, uniq, 4) == 0){
+
 			parseUniq(cmd);
+
+		}else if(strncmp(cmd, tail, 4) == 0){
+			
+			parseTail(cmd);
+
 		}else{
 			if(p > 0 && r == 0){
 
@@ -78,31 +87,38 @@ void analyzeCommand(char* cmd){
 }
 
 void redirectCommand(char* cmd){
+	//Save stdout fd to restore it later
 	int saved_stdout = dup(1);
 
+	//Copy of cmd for strtok
 	char* com = (char*)malloc(sizeof(char) * strlen(cmd) + 1);
 	memcpy(com, cmd, strlen(cmd) + 1);
 	
 	char *tok = strtok(com, ">");
 
+	//The actual command is the part before the '>' so we copy it here
 	char* actualCom = (char*)malloc(sizeof(char) * strlen(tok) + 1);
 	memcpy(actualCom, tok, strlen(tok) + 1);
 
 	actualCom[strlen(tok)] = '\0';
 
+	//Filename is after the '>'
 	tok = strtok(NULL, ">");
 
+	//Get filename and remove spaces
 	char* flname = (char*)malloc(sizeof(char) * 256);
 	memcpy(flname, tok, strlen(tok));
 
 	removeSpaces(flname);
 	
+	//Open the file or create it with permissions
 	int file = open(flname, O_WRONLY | O_CREAT, 0666);
 	
 	dup2(file, STDOUT_FILENO);
 	
 	linuxCommand(actualCom);
 
+	//Restore the old stdout
 	dup2(saved_stdout, 1);
 	close(saved_stdout);
 }
@@ -123,20 +139,22 @@ void removeSpaces(char* source){
 }
 
 void cdCommand(char* cmd){
+		//Make a copy of cmd so we don't ruin it with strtok
         char* com = (char*)malloc(sizeof(char) * strlen(cmd) + 1);
 
 		memcpy(com, cmd, strlen(cmd) + 1);
 
 		char* dir = (char*)malloc(sizeof(char) * 512);
 
+		//Tokenize spaces but ignore the first token since it's 'cd'
         char *p = strtok(com, " ");
 		p = strtok(NULL, " ");
 		int i = 0;
 
+		//Construct the directory we want to go to here
 		while(p){
 			if(i==0){
 				memcpy(dir, p, strlen(p) + 1);
-				//dir[strlen(p)+1] == '\0';
 			}else{
 				strcat(dir, " ");
 				strcat(dir, p);
@@ -145,7 +163,7 @@ void cdCommand(char* cmd){
 			p = strtok(NULL, " ");
 		}
 
-		
+		//Change directory based on dir
         chdir(dir);
 		
 		free(com);
@@ -166,6 +184,8 @@ int pipeCommands(int* p, char* cmd){
 	if(f > 0){ /* parent */
 		wait(NULL);
 		
+		//Freeing up the char** at the very end
+		//Bad things happen if we don't
 		for(i = 0; i <= *p; i++)
 			free(split[i]);
 		free(split);
@@ -179,6 +199,8 @@ int pipeCommands(int* p, char* cmd){
 		int pip[2];
 
 		while(i <= *p){
+			
+			//Create a pipe for each child to pass the results into
 			if(pipe(pip) < 0){
 				printf("Couldn't pipe.");
 				exit(0);
@@ -192,20 +214,22 @@ int pipeCommands(int* p, char* cmd){
 			}
 
 			if(ch == 0){
+				//Memorise the write end of the pipe for later use
 				fd2 = pip[1];
-
 				
+				//Move stdin to fd1 unless it's the first command then we want actual stdin
 				if(i != 0){
 					dup2(fd1, 0);
 					close(fd1);
 				}
 
+				//Move stdout to fd2 unless it's the last command then we want the actual stdout
 				if(i != *p){
 					dup2(fd2, 1);
 					close(fd2);
 				}
 
-				
+				//Execute command which will have the result written into fd2
 				linuxCommand(split[i]);
 
 				exit(0);
@@ -213,6 +237,7 @@ int pipeCommands(int* p, char* cmd){
 
 			close(pip[1]);
 
+			//Memorise the read end for later use
 			fd1 = pip[0];
 
 			wait(NULL);
@@ -228,6 +253,8 @@ int pipeCommands(int* p, char* cmd){
 }
 
 char** splitCommand(char* cmd, int* p){
+	//Splits a large command containing | into multiple subcommands
+
 	char* copy = (char*)malloc(sizeof(char) * strlen(cmd) + 1);
 	memcpy(copy, cmd, strlen(cmd) + 1);
 
@@ -239,6 +266,7 @@ char** splitCommand(char* cmd, int* p){
 
 	char* tok = strtok(copy, "|");
 	i = 0;
+
 	while(tok != NULL){
 		result[i] = (char*)malloc(sizeof(char) * strlen(tok));
 		memcpy(result[i], tok, strlen(tok) + 1);
@@ -255,6 +283,8 @@ char** splitCommand(char* cmd, int* p){
 
 
 void findSymbols(int* p, int* r, char* cmd){
+	//Looks for | or > in the command and puts how many it found into p and r
+
     char* copy = (char*)malloc(strlen(cmd) + 1);
     memcpy(copy, cmd, strlen(cmd) + 1);
 
@@ -398,10 +428,6 @@ void linuxCommand(char* cmd){
 
 
         //Execvp with NULL terminated argument list
-
-		free(com);
-		free(com2);
-
         execvp(arg[0], arg);
 		
 		perror("Exec error: ");
