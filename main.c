@@ -270,7 +270,7 @@ char** splitCommand(char* cmd, int* p){
 	while(tok != NULL){
 		result[i] = (char*)malloc(sizeof(char) * strlen(tok));
 		memcpy(result[i], tok, strlen(tok) + 1);
-		result[strlen(tok)] = '\0';
+		result[i][strlen(tok)] = '\0';
 		i++;
 		tok = strtok(NULL, "|");
 	}
@@ -313,49 +313,6 @@ void findSymbols(int* p, int* r, char* cmd){
 
 	free(tok);
 	free(copy);
-}
-
-void childLinuxCommand(char* cmd){
-        char* com = (char*)malloc(sizeof(char) * strlen(cmd) + 1);
-
-		memcpy(com, cmd, strlen(cmd) + 1);
-
-        //For strtok purposes
-        char* com2 = (char*)malloc(sizeof(char) * strlen(cmd) + 1);
-
-		memcpy(com2, cmd, strlen(cmd) + 1);
-
-        int count = 0;
-
-        char sep[] = " ";
-
-        char* p = strtok(com, sep);
-
-        //Counting the words for arg list
-        while(p){
-            count++;
-            p = strtok(NULL, sep);
-        }
-
-        char* arg[count + 1]; //+1 for NULL
-
-        arg[count] = NULL;
-
-        char* pp = strtok(com2, sep);
-        int i = 0;
-
-        //Putting arguments into an array
-        while(pp){
-            arg[i++] = pp;
-            pp = strtok(NULL, sep);
-        }
-
-
-        //Execvp with NULL terminated argument list
-		
-        execvp(arg[0], arg);
-
-        exit(1);
 }
 
 

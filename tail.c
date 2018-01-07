@@ -62,9 +62,7 @@ int execTail(char* option, int* files, int* n, char** filenames){
 		nrBytes = atoi(option + 2);
 	}else if(option[1] == 'n'){
 		nrLines = atoi(option + 2);
-	}else if(option[1] == 'N'){
-		printf("Hey");
-	}else if(option[1] != 'q' || option[1] != 'c'){
+	}else if(option[1] != 'q' || option[1] != 'v' || option[1] != 'N'){
 		printf("Option not available.\n Available options: -c, -n, -q, -v");
 		return -1;
 	}
@@ -100,17 +98,73 @@ int execTail(char* option, int* files, int* n, char** filenames){
 		}
 		close(fd[0]);
 
+		//Getting the lines of the files	
+		char* tok;
+		int lines[*n];
+
+		for(i = 0; i < *n; i++){
+			lines[i] = 0;
+		}
+
+		i = 0;
+		tok = strchr(buff[i], '\n');
+
+		while(i < *n){		
+			//Count lines in file
+			while(tok != NULL){
+				lines[i]++;
+				tok = strchr(tok+1, '\n');
+			}
+
+			i++;
+		}
+
+		i = 0;
+		int j = 0;
+		char* tok2;
+		char* results[nrLines * (*n)];
+	
+
+		while(i < *n){
+			tok = tok2 = buff[i];
+			
+			while((tok2 = strchr(tok, '\n'))){
+
+				if(lines[i] - j <= nrLines){
+					results[i] = (char*)malloc(sizeof(char) * (tok2 - tok + 1));		
+					memcpy(results[i], tok, tok2 - tok + 1);
+					results[i][tok2 - tok] = '\0';
+				}
+				tok = tok2 + 1;
+				j++;
+			}
+
+			i++;
+		}
+
+
+		//int total = nrLines * (*n);
+
 		i = 0;
 
 		if(*n == 1){
-			if(option[1] == 'c')
+			
+			if(option[1] == 'c'){
 				printf("%s", buff[i] + (strlen(buff[i]) - nrBytes));
-			else if(option[1] == 'n')
-				exit(0);
+			}else if(option[1] == 'n'){
+				for(i = 0; i < nrLines; i++){
+					printf("ran");
+					printf("%s", results[i]);
+				}
+			}
 		}else{
+			printf("%c", option[1]);
+
 			for(i = 0; i < *n; i ++){
 				if(option[1] == 'q'){
 					printf("\n%s\n", buff[i]);
+				}else if(option[1] == 'c'){
+					printf("\n====\n%s\n====\n%s\n", filenames[i], buff[i] + (strlen(buff[i]) - nrBytes));
 				}else{
 					printf("\n====\n%s\n====\n%s\n", filenames[i], buff[i]);
 				}
@@ -119,7 +173,7 @@ int execTail(char* option, int* files, int* n, char** filenames){
 		
 		exit(0);
 	}else{
-
+		
 		//Parent reads files and sends it to child
 		char* buff;
 		int m;

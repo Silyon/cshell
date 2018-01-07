@@ -109,6 +109,25 @@ int execUniq(char* option, int* file){
 }
 
 int selectUniq(char* text, char* option){
+	int o = 0;
+	int ins = 0;
+
+	//o variable for checking option so we don't run strcmp a million times
+	if(strcmp(option, "-u") == 0){
+		o = 1;
+	}else if(strcmp(option, "-d") == 0){
+		o = 2;
+	}else if(*option == '\0' || strcmp(option, "-i") == 0){
+		o = 3;
+	}else{
+		printf("Invalid option");
+		return -1;
+	}
+
+	if(strcmp(option, "-i") == 0)
+		ins = 1;
+
+
 	//Cache for remembering lines to compare to
 	char* cache = (char*)malloc(sizeof(char) * 512);
 
@@ -117,22 +136,15 @@ int selectUniq(char* text, char* option){
 
 	memcpy(textcpy, text, strlen(text) + 1);
 
-	char* tok = strtok(textcpy, "\n");
+	char* tok = strchr(textcpy, '\n');
 	int i = 0;
 
 	//Count lines in file
 	while(tok != NULL){
 		i++;
-		tok = strtok(NULL, "\n");
+		tok = strchr(tok+1, '\n');
 	}
-
-	free(textcpy);
-
-	//Reset textcpy
-	textcpy = (char*)malloc(sizeof(char) * strlen(text + 1));
-
-	memcpy(textcpy, text, strlen(text) + 1);
-
+	
 	//Initialise result array and appearance map for each line
 	int n = i;
 	char* result[n];
@@ -144,67 +156,90 @@ int selectUniq(char* text, char* option){
 
 	int j = 0;
 
-	char* tok2 = strtok(textcpy, "\n");
+	char* tok2, *tok3;	
+
+	tok2 = tok3 = textcpy;
 
 	i = 0;
 
-	while(tok2 != NULL){
-		result[i] = (char*)malloc(sizeof(char) * strlen(tok2) + 1);
-		memcpy(result[i], tok2, strlen(tok2) + 1);
-		result[i++][strlen(tok2)] = '\0';
+	while((tok3 = strchr(tok2, '\n'))){
+		result[i] = (char*)malloc(sizeof(char) * (tok3 - tok2 + 1));
+		memcpy(result[i], tok2, tok3 - tok2 + 1);
+		result[i++][tok3 - tok2] = '\0';
 
-		tok2 = strtok(NULL, "\n");
+		tok2 = tok3 + 1;
 	}
-
-	free(textcpy);
+	
+	if(textcpy)
+		free(textcpy);
 
 	i = 0;
 	cache = result[0];
 	counter[0]++;
 
 	//Check for consecutive hits on the same text
-	for(i = 1; i < n; i++){
-		if(strcmp(cache, result[i]) == 0){
-			counter[j]++;
-		}else{
-			//if we find a different line, jump j over to the index of that line
-			cache = result[i];
-			j += counter[j];
-			counter[j]++;
 
+	if(ins == 0){
+		for(i = 1; i < n; i++){
+			if(strcmp(cache, result[i]) == 0){
+				counter[j]++;
+			}else{
+				//if we find a different line, jump j over to the index of that line
+				cache = result[i];
+				j += counter[j];
+				counter[j]++;
+
+			}
+		}
+	}else{
+		for(i = 1; i < n; i++){
+			if(strcasecmp(cache, result[i]) == 0){
+				counter[j]++;
+			}else{
+				//if we find a different line, jump j over to the index of that line
+				cache = result[i];
+				j += counter[j];
+				counter[j]++;
+
+			}
 		}
 	}
 
 	i = 0;
-	int o = 0;
+	int first = 1;
 	
-	//o variable for checking option so we don't run strcmp a million times
-	if(strcmp(option, "-u") == 0){
-		o = 1;
-	}else if(strcmp(option, "-d") == 0){
-		o = 2;
-	}else if(*option == '\0'){
-		o = 3;
-	}else{
-		printf("Invalid option");
-		return -1;
-	}
+	
 
 	while(i < n){
 		if(o == 1){
 			//-u prints only unique lines
 			if(counter[i] == 1){
-				printf("\n%s", result[i]);
+				if(first){
+					printf("%s", result[i]);
+					first = 0;
+				}else{
+					printf("\n%s", result[i]);				
+				}
 			}
 		}else if(o == 2){
 			//-d prints only duplicate lines
 			if(counter[i] > 1){
-				printf("\n%s", result[i]);
+				if(first){
+					printf("%s", result[i]);
+					first = 0;
+				}else{
+					printf("\n%s", result[i]);				
+				}
 			}
 		}else if(o == 3){
 			//default prints both unique and duplicate lines only once
 			if(counter[i] >= 1){
-				printf("\n%s", result[i]);
+				if(first){
+					printf("%s", result[i]);
+					first = 0;
+				}else{
+					printf("\n%s", result[i]);				
+				}
 			}
 		}
 		
