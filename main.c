@@ -75,18 +75,26 @@ void analyzeCommand(char* cmd){
 
 			}else if(p == 0 && r == 1){
 
-				redirectCommand(cmd);
+				redirectCommand(cmd, p);
 
 			}else if(p == 0 && r == 0){
 
 				linuxCommand(cmd);
+
+			}else if(p > 0 && r == 1){
+				
+				redirectCommand(cmd, p);
+
+			}else if(r > 1){
+				
+				printf("You can only redirect output once, at the end of the command.");
 
 			}
 		}
     }
 }
 
-void redirectCommand(char* cmd){
+void redirectCommand(char* cmd, int pip){
 	//Save stdout fd to restore it later
 	int saved_stdout = dup(1);
 
@@ -116,7 +124,11 @@ void redirectCommand(char* cmd){
 	
 	dup2(file, STDOUT_FILENO);
 	
-	linuxCommand(actualCom);
+	if(pip == 0)
+		linuxCommand(actualCom);
+	else
+		pipeCommands(&pip, actualCom);
+
 
 	//Restore the old stdout
 	dup2(saved_stdout, 1);
@@ -325,8 +337,6 @@ void linuxCommand(char* cmd){
         exit(1);
     }
 
-
-
     if((pid = fork()) == -1){
         printf("Couldn't fork");
         exit(1);
@@ -370,23 +380,41 @@ void linuxCommand(char* cmd){
             p = strtok(NULL, sep);
         }
 
-        char* arg[count + 1]; //+1 for NULL
+		if(strstr(cmd, "grep")){
+			//Same thing as the other branch except we add --color=auto because it looks nice.
 
-        arg[count] = NULL;
+			char* arg[count + 2];
+			char color[] = "--color=auto";
+			arg[count+1] = NULL;
 
-        char* pp = strtok(com2, sep);
-        int i = 0;
+			char* pp = strtok(com2, sep);
+			int i = 0;
+			while(pp){
+				arg[i++] = pp;
+				pp = strtok(NULL, sep);
+			}
 
-        //Putting arguments into an array
-        while(pp){
-            arg[i++] = pp;
-            pp = strtok(NULL, sep);
-        }
+			arg[i] = color;
+
+			execvp(arg[0], arg);
+		}else{
+			char* arg[count + 1]; //+1 for NULL
+
+			arg[count] = NULL;
+
+			char* pp = strtok(com2, sep);
+			int i = 0;
+
+			//Putting arguments into an array
+			while(pp){
+				arg[i++] = pp;
+				pp = strtok(NULL, sep);
+			}
 
 
-        //Execvp with NULL terminated argument list
-        execvp(arg[0], arg);
-		
+			//Execvp with NULL terminated argument list
+			execvp(arg[0], arg);
+		}
 		perror("Exec error: ");
         exit(1);
     }else{

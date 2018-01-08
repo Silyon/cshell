@@ -9,5 +9,5 @@ void removeSpaces(char* source);
 char** splitCommand(char* cmd, int* p);
 void childLinuxCommand(char* cmd);
 void cdCommand(char* cmd);
-void redirectCommand(char* cmd);
+void redirectCommand(char* cmd, int pip);
 void removeLeadingSpace(char* src);

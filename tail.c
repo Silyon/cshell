@@ -29,14 +29,13 @@ int parseTail(char* cmd){
 		if(result[i][0] == '-' && opts == -1){
 			memcpy(option, result[i], strlen(result[i]) + 1);
 			option[strlen(result[i])] = '\0';
-			printf("Option: %s\n", option);
 			opts = i;
 		}else if(opts != -1 && result[i][0] == '-'){
 			printf("You can only have one option.\n Available options: -c, -n, -q, -v");
 			return -1;
 		}
 		if(strcmp(result[i], "tail") != 0 && result[i][0] != '-'){
-			filenames[j] = result[i];			
+			filenames[j] = result[i];
 			files[j++] = open(result[i], O_RDONLY);
 		}
 	}
@@ -62,7 +61,7 @@ int execTail(char* option, int* files, int* n, char** filenames){
 		nrBytes = atoi(option + 2);
 	}else if(option[1] == 'n'){
 		nrLines = atoi(option + 2);
-	}else if(option[1] != 'q' || option[1] != 'v' || option[1] != 'N'){
+	}else if(option[1] != 'q' && option[1] != 'v' && option[1] != 'N'){
 		printf("Option not available.\n Available options: -c, -n, -q, -v");
 		return -1;
 	}
@@ -98,78 +97,113 @@ int execTail(char* option, int* files, int* n, char** filenames){
 		}
 		close(fd[0]);
 
-		//Getting the lines of the files	
-		char* tok;
-		int lines[*n];
-
-		for(i = 0; i < *n; i++){
-			lines[i] = 0;
-		}
-
-		i = 0;
-		tok = strchr(buff[i], '\n');
-
-		while(i < *n){		
-			//Count lines in file
-			while(tok != NULL){
-				lines[i]++;
-				tok = strchr(tok+1, '\n');
-			}
-
-			i++;
-		}
-
-		i = 0;
 		int j = 0;
+		int k = 0;
 		char* tok2;
 		char* results[nrLines * (*n)];
-	
+		char* tok;
+		int lines[*n];
+		
+		if(option[1] != 'c'){
+			//If the option is c then we don't need to do this since we can get the last few bytes of a file more easily
 
-		while(i < *n){
-			tok = tok2 = buff[i];
-			
-			while((tok2 = strchr(tok, '\n'))){
-
-				if(lines[i] - j <= nrLines){
-					results[i] = (char*)malloc(sizeof(char) * (tok2 - tok + 1));		
-					memcpy(results[i], tok, tok2 - tok + 1);
-					results[i][tok2 - tok] = '\0';
-				}
-				tok = tok2 + 1;
-				j++;
+			//Getting the lines of the files	
+			for(i = 0; i < *n; i++){
+				lines[i] = 0;
 			}
 
-			i++;
+			i = 0;
+		
+
+			while(i < *n){
+				tok = strchr(buff[i], '\n');
+	
+				//Count lines in file
+				while(tok != NULL){
+					lines[i]++;
+					tok = strchr(tok+1, '\n');
+				}
+
+				i++;
+			}
+
+			i = 0;
+			
+	
+
+			while(i < *n){
+				tok = tok2 = buff[i];
+				j = 0;
+			
+				//Getting each line in each file and allocating space for it and copying it
+				while((tok2 = strchr(tok, '\n'))){
+					if(lines[i] - j <= nrLines){
+						results[k] = (char*)malloc(sizeof(char) * (tok2 - tok + 1));		
+						memcpy(results[k], tok, tok2 - tok + 1);
+						results[k++][tok2 - tok] = '\0';
+					}
+					tok = tok2 + 1;
+					j++;
+				}
+				i++;
+			}
 		}
 
 
-		//int total = nrLines * (*n);
+		int total = nrLines * (*n);
 
 		i = 0;
+		j = 0;
 
 		if(*n == 1){
 			
 			if(option[1] == 'c'){
 				printf("%s", buff[i] + (strlen(buff[i]) - nrBytes));
-			}else if(option[1] == 'n'){
-				for(i = 0; i < nrLines; i++){
-					printf("ran");
-					printf("%s", results[i]);
-				}
 			}
-		}else{
-			printf("%c", option[1]);
 
-			for(i = 0; i < *n; i ++){
-				if(option[1] == 'q'){
-					printf("\n%s\n", buff[i]);
-				}else if(option[1] == 'c'){
-					printf("\n====\n%s\n====\n%s\n", filenames[i], buff[i] + (strlen(buff[i]) - nrBytes));
-				}else{
-					printf("\n====\n%s\n====\n%s\n", filenames[i], buff[i]);
+			else{
+				if(option[1] == 'v')
+					printf("\n====\n%s\n====\n", filenames[0]);
+
+				for(i = 0; i < nrLines; i++)
+					printf("%s\n", results[i]);
+			}
+
+		}else{
+			if(option[1] == 'c'){
+
+				for(i = 0; i < *n; i ++)
+						printf("\n====\n%s\n====\n%s\n", filenames[i], buff[i] + (strlen(buff[i]) - nrBytes));
+				
+			}else if(option[1] == 'n' || option[1] == 'N'){
+
+				for(i = 0; i < total; i++){
+					if(i % nrLines == 0){
+						printf("\n====\n%s\n====\n", filenames[j++]);
+					}
+					printf("%s\n", results[i]);
 				}
+
+			}else if(option[1] == 'q'){
+
+				for(i = 0; i < total; i++){
+					if(i % nrLines == 0)
+						printf("\n");
+
+					printf("%s\n", results[i]);
+				}
+
 			}
 		}
+
+		
+		for(i = 0; i < *n; i++)
+			if(buff[i])
+				free(buff[i]);
+
+		for(i = 0; i < total; i++)
+			if(results[i])
+				free(results[i]);
 		
 		exit(0);
 	}else{
